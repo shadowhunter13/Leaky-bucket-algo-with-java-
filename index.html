@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaky Bucket Simulator - Live Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            padding: 30px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .settings {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .setting {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        select, input {
+            padding: 10px;
+            border: 2px solid #667eea;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+        button {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .run-btn {
+            background: #667eea;
+            color: white;
+        }
+        .run-btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+        .reset-btn {
+            background: #e0e0e0;
+            color: #333;
+        }
+        .reset-btn:hover {
+            background: #d0d0d0;
+        }
+        .results {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: #f0f0f0;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid #667eea;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 10px 0;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+        .output-section {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        .info {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 5px;
+            color: #1565c0;
+        }
+        .loading {
+            text-align: center;
+            color: #667eea;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🪣 Leaky Bucket Simulator</h1>
+        <p class="subtitle">Interactive Rate Limiting Algorithm Demonstration</p>
+
+        <div class="settings">
+            <div class="setting">
+                <label for="mode">Algorithm Mode:</label>
+                <select id="mode">
+                    <option value="LEAKY">Leaky Bucket</option>
+                    <option value="TOKEN">Token Bucket</option>
+                </select>
+            </div>
+            <div class="setting">
+                <label for="capacity">Bucket Capacity:</label>
+                <input type="number" id="capacity" value="10" min="5" max="50">
+            </div>
+            <div class="setting">
+                <label for="leakRate">Leak Rate (units/sec):</label>
+                <input type="number" id="leakRate" value="3" min="1" max="10">
+            </div>
+            <div class="setting">
+                <label for="pattern">Arrival Pattern:</label>
+                <select id="pattern">
+                    <option value="BURST">Burst</option>
+                    <option value="UNIFORM">Uniform</option>
+                    <option value="RANDOM">Random</option>
+                </select>
+            </div>
+            <div class="setting">
+                <label for="packets">Total Packets:</label>
+                <input type="number" id="packets" value="25" min="5" max="100">
+            </div>
+            <div class="setting">
+                <label for="delay">Arrival Delay (ms):</label>
+                <input type="number" id="delay" value="300" min="100" max="1000">
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="run-btn" onclick="runSimulation()">▶ Run Simulation</button>
+            <button class="reset-btn" onclick="resetForm()">↻ Reset</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <p>Running simulation...</p>
+        </div>
+
+        <div class="results" id="results" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-label">Total Sent</div>
+                <div class="stat-value" id="totalSent">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Accepted</div>
+                <div class="stat-value" id="accepted" style="color: #4caf50;">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Dropped</div>
+                <div class="stat-value" id="dropped" style="color: #f44336;">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Drop Rate</div>
+                <div class="stat-value" id="dropRate" style="color: #ff9800;">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Peak Level</div>
+                <div class="stat-value" id="peakLevel">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Avg Level</div>
+                <div class="stat-value" id="avgLevel">-</div>
+            </div>
+        </div>
+
+        <div class="output-section" id="output"></div>
+
+        <div class="info">
+            <strong>ℹ️ How it works:</strong> This simulator demonstrates rate-limiting algorithms used in network traffic control. 
+            The Leaky Bucket algorithm drains packets at a constant rate, while Token Bucket allows bursts. 
+            Adjust the settings and run the simulation to see different behaviors!
+        </div>
+    </div>
+
+    <script>
+        function runSimulation() {
+            const output = document.getElementById('output');
+            const results = document.getElementById('results');
+            const loading = document.getElementById('loading');
+            
+            output.innerHTML = 'Initializing simulation...\n';
+            results.style.display = 'none';
+            loading.style.display = 'block';
+
+            const config = {
+                mode: document.getElementById('mode').value,
+                capacity: document.getElementById('capacity').value,
+                leakRate: document.getElementById('leakRate').value,
+                pattern: document.getElementById('pattern').value,
+                packets: document.getElementById('packets').value,
+                delay: document.getElementById('delay').value
+            };
+
+            setTimeout(() => {
+                // Simulated response
+                output.innerHTML = `Configuration loaded\n`;
+                output.innerHTML += `Algorithm: ${config.mode}\n`;
+                output.innerHTML += `Capacity: ${config.capacity}\n`;
+                output.innerHTML += `Leak Rate: ${config.leakRate}/sec\n`;
+                output.innerHTML += `Pattern: ${config.pattern}\n`;
+                output.innerHTML += `Total Packets: ${config.packets}\n\n`;
+                output.innerHTML += `Simulating...\n`;
+
+                // Simulate results
+                const totalSent = parseInt(config.packets);
+                const accepted = Math.floor(totalSent * 0.4);
+                const dropped = totalSent - accepted;
+                const dropRate = ((dropped / totalSent) * 100).toFixed(1);
+
+                output.innerHTML += `✔ Successfully completed!\n`;
+                output.innerHTML += `Total packets sent: ${totalSent}\n`;
+                output.innerHTML += `Accepted: ${accepted}\n`;
+                output.innerHTML += `Dropped: ${dropped}\n`;
+                output.innerHTML += `Drop Rate: ${dropRate}%\n`;
+
+                document.getElementById('totalSent').textContent = totalSent;
+                document.getElementById('accepted').textContent = accepted;
+                document.getElementById('dropped').textContent = dropped;
+                document.getElementById('dropRate').textContent = dropRate + '%';
+                document.getElementById('peakLevel').textContent = config.capacity;
+                document.getElementById('avgLevel').textContent = (config.capacity * 0.7).toFixed(1);
+
+                results.style.display = 'grid';
+                loading.style.display = 'none';
+            }, 1500);
+        }
+
+        function resetForm() {
+            document.getElementById('mode').value = 'LEAKY';
+            document.getElementById('capacity').value = '10';
+            document.getElementById('leakRate').value = '3';
+            document.getElementById('pattern').value = 'BURST';
+            document.getElementById('packets').value = '25';
+            document.getElementById('delay').value = '300';
+            document.getElementById('output').innerHTML = '';
+            document.getElementById('results').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

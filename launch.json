@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "▶ Run Simulation",
+            "request": "launch",
+            "mainClass": "com.leakybucket.simulation.BucketSimulation",
+            "projectName": "LeakyBucket",
+            "cwd": "${workspaceFolder}",
+            "args": []
+        },
+        {
+            "type": "java",
+            "name": "🧪 Run JUnit Tests",
+            "request": "launch",
+            "mainClass": "org.junit.platform.console.ConsoleLauncher",
+            "projectName": "LeakyBucket",
+            "args": [
+                "--class-path", "out",
+                "--scan-class-path"
+            ],
+            "classPaths": [
+                "out",
+                "lib/junit-platform-console-standalone.jar"
+            ]
+        }
+    ]
+}
